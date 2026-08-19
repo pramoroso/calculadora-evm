@@ -1,0 +1,529 @@
+<title>Calculadora EVM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#eef2f7;
+    --grid:#dbe3ee;
+    --surface:#ffffff;
+    --surface-2:#f6f9fc;
+    --ink:#0f2333;
+    --muted:#5c6f80;
+    --faint:#8496a5;
+    --line:#d5dfea;
+    --accent:#1f5fbf;
+    --accent-soft:#e5eefb;
+    --pv:#5a7896;
+    --ev:#1f8a5b;
+    --ac:#c26a2a;
+    --good:#1f8a5b;
+    --good-bg:#e3f3ea;
+    --warn:#b6852a;
+    --warn-bg:#f6efdc;
+    --bad:#c0392b;
+    --bad-bg:#f8e6e3;
+    --shadow:0 1px 2px rgba(15,35,51,.05),0 8px 28px -14px rgba(15,35,51,.22);
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --bg:#0b1a28;
+      --grid:#13293b;
+      --surface:#10263a;
+      --surface-2:#0d2033;
+      --ink:#e7eef5;
+      --muted:#93a7b8;
+      --faint:#6b8095;
+      --line:#20394f;
+      --accent:#5b9bf0;
+      --accent-soft:#152f49;
+      --pv:#7c9cbb;
+      --ev:#3fbd85;
+      --ac:#e08b4a;
+      --good:#3fbd85;
+      --good-bg:#0f3126;
+      --warn:#e0b24a;
+      --warn-bg:#332a12;
+      --bad:#e8695a;
+      --bad-bg:#33191a;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1a28;
+    --grid:#13293b;
+    --surface:#10263a;
+    --surface-2:#0d2033;
+    --ink:#e7eef5;
+    --muted:#93a7b8;
+    --faint:#6b8095;
+    --line:#20394f;
+    --accent:#5b9bf0;
+    --accent-soft:#152f49;
+    --pv:#7c9cbb;
+    --ev:#3fbd85;
+    --ac:#e08b4a;
+    --good:#3fbd85;
+    --good-bg:#0f3126;
+    --warn:#e0b24a;
+    --warn-bg:#332a12;
+    --bad:#e8695a;
+    --bad-bg:#33191a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background-color:var(--bg);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:26px 26px;
+    background-position:-1px -1px;
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .wrap{max-width:1080px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,28px) 64px}
+
+  /* Header */
+  header{margin-bottom:34px}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);display:flex;align-items:center;gap:10px;margin:0 0 14px
+  }
+  .eyebrow::before{content:"";width:26px;height:2px;background:var(--accent);display:inline-block}
+  h1{
+    font-family:"Sora",sans-serif;font-weight:700;line-height:1.04;letter-spacing:-.02em;
+    font-size:clamp(2rem,5.4vw,3.35rem);margin:0 0 14px;text-wrap:balance
+  }
+  h1 span{color:var(--accent)}
+  .lede{font-size:clamp(1rem,1.6vw,1.12rem);color:var(--muted);max-width:60ch;margin:0}
+
+  .themed-btn{
+    position:fixed;top:16px;right:16px;z-index:20;border:1px solid var(--line);background:var(--surface);
+    color:var(--muted);width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:1rem;
+    box-shadow:var(--shadow);display:grid;place-items:center
+  }
+  .themed-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)
+  }
+  .panel{padding:22px}
+  .panel-title{
+    font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px
+  }
+
+  /* Inputs */
+  .field{margin-top:18px}
+  .field:first-of-type{margin-top:20px}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:.86rem;font-weight:500;margin-bottom:7px}
+  .field label small{color:var(--faint);font-weight:400;font-family:"IBM Plex Mono",monospace;font-size:.72rem}
+  .input-shell{position:relative;display:flex;align-items:center}
+  .input-shell .prefix{position:absolute;left:13px;color:var(--faint);font-size:.9rem;pointer-events:none}
+  .input-shell .suffix{position:absolute;right:13px;color:var(--faint);font-size:.9rem;pointer-events:none}
+  input[type=number]{
+    width:100%;font-family:"IBM Plex Mono",monospace;font-size:1.02rem;font-weight:500;color:var(--ink);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;
+    -moz-appearance:textfield
+  }
+  input.has-prefix{padding-left:34px}
+  input.has-suffix{padding-right:34px}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  input[type=range]{width:100%;accent-color:var(--accent);margin-top:8px}
+  .reset{
+    margin-top:22px;width:100%;padding:10px;border:1px dashed var(--line);border-radius:10px;background:transparent;
+    color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.05em;cursor:pointer
+  }
+  .reset:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* Headline indices */
+  .indices{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:22px}
+  @media(max-width:460px){.indices{grid-template-columns:1fr}}
+  .idx{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--surface-2);position:relative;overflow:hidden}
+  .idx .idx-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .idx .idx-name{font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.12em;color:var(--faint)}
+  .idx .idx-val{font-family:"Sora",sans-serif;font-weight:700;font-size:2.1rem;line-height:1;letter-spacing:-.02em}
+  .idx .idx-label{font-size:.82rem;color:var(--muted);margin-top:6px}
+  .pill{font-family:"IBM Plex Mono",monospace;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+  .pill.good{color:var(--good);background:var(--good-bg)}
+  .pill.warn{color:var(--warn);background:var(--warn-bg)}
+  .pill.bad{color:var(--bad);background:var(--bad-bg)}
+  .idx .bar{height:5px;border-radius:3px;background:var(--line);margin-top:14px;overflow:hidden}
+  .idx .bar i{display:block;height:100%;border-radius:3px;transition:width .35s ease,background .35s ease}
+
+  /* Metric grid */
+  .metrics{padding:22px;border-top:1px solid var(--line)}
+  .metrics h3,.chart-wrap h3,.gloss h3{font-family:"Sora",sans-serif;font-size:.95rem;font-weight:600;margin:0 0 16px;letter-spacing:-.01em}
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  @media(max-width:560px){.mgrid{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:var(--surface);padding:14px 15px}
+  .metric .m-name{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;gap:6px}
+  .metric .m-val{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:1.18rem;margin-top:5px;letter-spacing:-.01em}
+  .metric .m-sub{font-size:.74rem;color:var(--muted);margin-top:2px}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+  .val-pos{color:var(--good)}.val-neg{color:var(--bad)}
+
+  /* Chart */
+  .chart-wrap{padding:22px;border-top:1px solid var(--line)}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:16px}
+  .legend span{display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--muted)}
+  .chart{width:100%;height:auto;display:block}
+  .chart text{font-family:"IBM Plex Mono",monospace}
+
+  /* Glossary */
+  .gloss{margin-top:22px;padding:24px}
+  .gaccordion{border-top:1px solid var(--line)}
+  details{border-bottom:1px solid var(--line)}
+  summary{
+    list-style:none;cursor:pointer;padding:14px 4px;display:flex;align-items:baseline;gap:12px;
+    font-weight:500;font-size:.95rem
+  }
+  summary::-webkit-details-marker{display:none}
+  summary .code{font-family:"IBM Plex Mono",monospace;color:var(--accent);font-weight:600;font-size:.82rem;min-width:52px}
+  summary .arw{margin-left:auto;color:var(--faint);transition:transform .2s;font-size:.8rem}
+  details[open] summary .arw{transform:rotate(90deg)}
+  details .body{padding:0 4px 16px 68px;color:var(--muted);font-size:.9rem}
+  details .body .mono{color:var(--ink);background:var(--surface-2);padding:2px 7px;border-radius:6px;font-size:.82rem;border:1px solid var(--line)}
+  @media(max-width:460px){details .body{padding-left:4px}}
+
+  footer{margin-top:40px;text-align:center;color:var(--faint);font-size:.82rem;line-height:1.8}
+  footer a{color:var(--accent);text-decoration:none;font-weight:500}
+  footer a:hover{text-decoration:underline}
+  .foot-badge{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.06em}
+</style>
+
+<button class="themed-btn" id="themeBtn" aria-label="Alternar tema">◑</button>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Gestão de Valor Agregado · PMBOK</p>
+    <h1>Calculadora <span>EVM</span></h1>
+    <p class="lede">Informe o orçamento, o avanço planejado, o avanço real e o custo incorrido. A ferramenta calcula os índices de desempenho de custo e prazo — e projeta como o projeto vai terminar.</p>
+  </header>
+
+  <div class="grid">
+    <!-- INPUT -->
+    <section class="card panel" aria-label="Entradas">
+      <p class="panel-title">Entradas do projeto</p>
+
+      <div class="field">
+        <label for="bac">Orçamento no Término <small>BAC</small></label>
+        <div class="input-shell">
+          <span class="prefix">R$</span>
+          <input class="has-prefix mono" type="number" id="bac" value="500000" min="0" step="1000">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="planned">% Planejado <small id="plannedOut">50%</small></label>
+        <div class="input-shell">
+          <input class="has-suffix mono" type="number" id="planned" value="50" min="0" max="100" step="1">
+          <span class="suffix">%</span>
+        </div>
+        <input type="range" id="plannedR" value="50" min="0" max="100" step="1">
+      </div>
+
+      <div class="field">
+        <label for="actual">% Concluído (real) <small id="actualOut">45%</small></label>
+        <div class="input-shell">
+          <input class="has-suffix mono" type="number" id="actual" value="45" min="0" max="100" step="1">
+          <span class="suffix">%</span>
+        </div>
+        <input type="range" id="actualR" value="45" min="0" max="100" step="1">
+      </div>
+
+      <div class="field">
+        <label for="ac">Custo Real <small>AC</small></label>
+        <div class="input-shell">
+          <span class="prefix">R$</span>
+          <input class="has-prefix mono" type="number" id="ac" value="210000" min="0" step="1000">
+        </div>
+      </div>
+
+      <button class="reset" id="reset">↺ restaurar exemplo</button>
+    </section>
+
+    <!-- RESULTS -->
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <section class="card" aria-label="Índices principais">
+        <div class="indices">
+          <div class="idx">
+            <div class="idx-top">
+              <span class="idx-name">CPI · CUSTO</span>
+              <span class="pill" id="cpiPill">—</span>
+            </div>
+            <div class="idx-val mono" id="cpiVal">—</div>
+            <div class="idx-label" id="cpiLabel">Índice de Desempenho de Custo</div>
+            <div class="bar"><i id="cpiBar"></i></div>
+          </div>
+          <div class="idx">
+            <div class="idx-top">
+              <span class="idx-name">SPI · PRAZO</span>
+              <span class="pill" id="spiPill">—</span>
+            </div>
+            <div class="idx-val mono" id="spiVal">—</div>
+            <div class="idx-label" id="spiLabel">Índice de Desempenho de Prazo</div>
+            <div class="bar"><i id="spiBar"></i></div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <h3>Valores base &amp; variações</h3>
+          <div class="mgrid">
+            <div class="metric">
+              <div class="m-name"><span class="dot" style="background:var(--pv)"></span>PV</div>
+              <div class="m-val" id="pv">—</div>
+              <div class="m-sub">Valor Planejado</div>
+            </div>
+            <div class="metric">
+              <div class="m-name"><span class="dot" style="background:var(--ev)"></span>EV</div>
+              <div class="m-val" id="ev">—</div>
+              <div class="m-sub">Valor Agregado</div>
+            </div>
+            <div class="metric">
+              <div class="m-name"><span class="dot" style="background:var(--ac)"></span>AC</div>
+              <div class="m-val" id="acM">—</div>
+              <div class="m-sub">Custo Real</div>
+            </div>
+            <div class="metric">
+              <div class="m-name">CV</div>
+              <div class="m-val" id="cv">—</div>
+              <div class="m-sub" id="cvSub">Variação de Custo</div>
+            </div>
+            <div class="metric">
+              <div class="m-name">SV</div>
+              <div class="m-val" id="sv">—</div>
+              <div class="m-sub" id="svSub">Variação de Prazo</div>
+            </div>
+            <div class="metric">
+              <div class="m-name">% CONC.</div>
+              <div class="m-val" id="pct">—</div>
+              <div class="m-sub">do valor agregado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <h3>Projeção de término</h3>
+          <div class="mgrid">
+            <div class="metric">
+              <div class="m-name">EAC</div>
+              <div class="m-val" id="eac">—</div>
+              <div class="m-sub">Estimativa no Término</div>
+            </div>
+            <div class="metric">
+              <div class="m-name">ETC</div>
+              <div class="m-val" id="etc">—</div>
+              <div class="m-sub">Estimativa p/ Terminar</div>
+            </div>
+            <div class="metric">
+              <div class="m-name">VAC</div>
+              <div class="m-val" id="vac">—</div>
+              <div class="m-sub" id="vacSub">Variação no Término</div>
+            </div>
+            <div class="metric">
+              <div class="m-name">TCPI</div>
+              <div class="m-val" id="tcpi">—</div>
+              <div class="m-sub">Desempenho p/ concluir</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <h3>Custo planejado × agregado × real</h3>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--pv)"></span>PV planejado</span>
+            <span><span class="dot" style="background:var(--ev)"></span>EV agregado</span>
+            <span><span class="dot" style="background:var(--ac)"></span>AC real</span>
+            <span><span class="dot" style="background:var(--accent)"></span>BAC / EAC término</span>
+          </div>
+          <svg class="chart" id="chart" viewBox="0 0 620 250" role="img" aria-label="Gráfico de barras EVM"></svg>
+        </div>
+      </section>
+
+      <div class="card gloss">
+        <h3>O que cada sigla significa</h3>
+        <div class="gaccordion">
+          <details open>
+            <summary><span class="code">CPI</span> Eficiência de custo <span class="arw">›</span></summary>
+            <div class="body"><span class="mono">CPI = EV ÷ AC</span> — quanto de valor você entregou para cada R$ gasto. <b>≥ 1</b> = dentro/abaixo do orçamento; <b>&lt; 1</b> = gastando mais do que entrega.</div>
+          </details>
+          <details>
+            <summary><span class="code">SPI</span> Eficiência de prazo <span class="arw">›</span></summary>
+            <div class="body"><span class="mono">SPI = EV ÷ PV</span> — o quão adiantado ou atrasado o projeto está. <b>≥ 1</b> = no prazo ou adiantado; <b>&lt; 1</b> = atrasado.</div>
+          </details>
+          <details>
+            <summary><span class="code">CV / SV</span> Variações <span class="arw">›</span></summary>
+            <div class="body"><span class="mono">CV = EV − AC</span> e <span class="mono">SV = EV − PV</span>. Positivo é bom; negativo indica estouro de custo ou atraso, em R$.</div>
+          </details>
+          <details>
+            <summary><span class="code">EAC</span> Estimativa no término <span class="arw">›</span></summary>
+            <div class="body"><span class="mono">EAC = BAC ÷ CPI</span> — quanto o projeto deve custar no total se o desempenho atual de custo se mantiver.</div>
+          </details>
+          <details>
+            <summary><span class="code">VAC</span> Variação no término <span class="arw">›</span></summary>
+            <div class="body"><span class="mono">VAC = BAC − EAC</span> — sobra (positivo) ou estouro (negativo) previsto ao final do projeto.</div>
+          </details>
+          <details>
+            <summary><span class="code">TCPI</span> Índice para concluir <span class="arw">›</span></summary>
+            <div class="body"><span class="mono">TCPI = (BAC − EV) ÷ (BAC − AC)</span> — a eficiência de custo necessária no trabalho restante para terminar dentro do orçamento. Acima de 1 significa que a recuperação exige desempenho melhor que o já realizado.</div>
+          </details>
+        </div>
+      </div>
+
+      <footer>
+        <p class="foot-badge">FERRAMENTA OPEN-SOURCE · CÓDIGO NO GITHUB</p>
+        <p>Feita para portfólio de gestão de projetos — sinta-se livre para usar e adaptar.</p>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var fmt=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+  var num=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2,minimumFractionDigits:2});
+
+  // sync sliders <-> number inputs
+  function link(numId,rangeId,outId){
+    var n=$(numId),r=$(rangeId),o=$(outId);
+    function fromN(){var v=clamp(n.value);r.value=v;o.textContent=v+'%';calc()}
+    function fromR(){n.value=r.value;o.textContent=r.value+'%';calc()}
+    n.addEventListener('input',fromN); r.addEventListener('input',fromR);
+  }
+  function clamp(v){v=parseFloat(v)||0;return Math.max(0,Math.min(100,v))}
+
+  function pillClass(v){ if(v>=1) return 'good'; if(v>=0.95) return 'warn'; return 'bad'; }
+  function pillText(v,good,warn,bad){ if(v>=1) return good; if(v>=0.95) return warn; return bad; }
+  function barColor(v){ if(v>=1) return 'var(--good)'; if(v>=0.95) return 'var(--warn)'; return 'var(--bad)'; }
+
+  function calc(){
+    var bac=parseFloat($('bac').value)||0;
+    var pp=clamp($('planned').value)/100;
+    var ap=clamp($('actual').value)/100;
+    var ac=parseFloat($('ac').value)||0;
+
+    var pv=bac*pp, ev=bac*ap;
+    var cv=ev-ac, sv=ev-pv;
+    var cpi=ac>0?ev/ac:0, spi=pv>0?ev/pv:0;
+    var eac=cpi>0?bac/cpi:0;
+    var etc=eac-ac;
+    var vac=bac-eac;
+    var tcpi=(bac-ac)!==0?(bac-ev)/(bac-ac):0;
+    var pct=bac>0?ev/bac:0;
+
+    // indices
+    $('cpiVal').textContent=cpi?num.format(cpi):'—';
+    $('spiVal').textContent=spi?num.format(spi):'—';
+    setPill('cpiPill',cpi,'no custo','atenção','acima');
+    setPill('spiPill',spi,'no prazo','atenção','atrasado');
+    $('cpiLabel').textContent=cpi>=1?'Entregando mais valor que o custo':'Custo maior que o valor entregue';
+    $('spiLabel').textContent=spi>=1?'No prazo ou adiantado':'Cronograma atrasado';
+    setBar('cpiBar',cpi); setBar('spiBar',spi);
+
+    // base
+    $('pv').textContent=fmt.format(pv);
+    $('ev').textContent=fmt.format(ev);
+    $('acM').textContent=fmt.format(ac);
+    signed('cv',cv,'Dentro do custo','Estouro de custo');
+    signed('sv',sv,'Adiantado','Atrasado');
+    $('pct').textContent=(pct*100).toFixed(0)+'%';
+
+    // forecast
+    $('eac').textContent=eac?fmt.format(eac):'—';
+    $('etc').textContent=etc>0?fmt.format(etc):fmt.format(0);
+    var vEl=$('vac');
+    vEl.textContent=(vac>=0?'+':'−')+fmt.format(Math.abs(vac)).replace('R$','R$ ');
+    vEl.className='m-val '+(vac>=0?'val-pos':'val-neg');
+    $('vacSub').textContent=vac>=0?'Sobra prevista':'Estouro previsto';
+    $('tcpi').textContent=tcpi?num.format(tcpi):'—';
+
+    drawChart(pv,ev,ac,bac,eac);
+  }
+
+  function setPill(id,v,g,w,b){
+    var el=$(id); el.className='pill '+pillClass(v); el.textContent=pillText(v,g,w,b);
+  }
+  function setBar(id,v){
+    var el=$(id); var w=Math.max(4,Math.min(100,v*66.7)); // 1.5 -> full
+    el.style.width=w+'%'; el.style.background=barColor(v);
+  }
+  function signed(id,val,pos,neg){
+    var el=$(id); var s=val>=0?'+':'−';
+    el.textContent=s+fmt.format(Math.abs(val)).replace('R$','R$ ');
+    el.className='m-val '+(val>=0?'val-pos':'val-neg');
+    $(id+'Sub').textContent=val>=0?pos:neg;
+  }
+
+  function drawChart(pv,ev,ac,bac,eac){
+    var svg=$('chart');
+    var W=620,H=250,padL=54,padR=16,padT=14,padB=34;
+    var max=Math.max(pv,ev,ac,bac,eac,1)*1.12;
+    var plotH=H-padT-padB, plotW=W-padL-padR;
+    var bars=[
+      {label:'PV',v:pv,c:'var(--pv)'},
+      {label:'EV',v:ev,c:'var(--ev)'},
+      {label:'AC',v:ac,c:'var(--ac)'},
+      {label:'EAC',v:eac,c:'var(--accent)'}
+    ];
+    var n=bars.length, slot=plotW/n, bw=Math.min(64,slot*0.5);
+    var s='';
+    // gridlines
+    for(var g=0;g<=4;g++){
+      var gy=padT+plotH-(plotH*g/4);
+      var gv=max*g/4;
+      s+='<line x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'" stroke="var(--line)" stroke-width="1"/>';
+      s+='<text x="'+(padL-8)+'" y="'+(gy+4)+'" text-anchor="end" fill="var(--faint)" font-size="10">'+kfmt(gv)+'</text>';
+    }
+    // BAC reference line
+    var bacY=padT+plotH-(plotH*bac/max);
+    s+='<line x1="'+padL+'" y1="'+bacY+'" x2="'+(W-padR)+'" y2="'+bacY+'" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>';
+    s+='<text x="'+(W-padR)+'" y="'+(bacY-6)+'" text-anchor="end" fill="var(--accent)" font-size="10" font-weight="600">BAC '+kfmt(bac)+'</text>';
+    // bars
+    bars.forEach(function(b,i){
+      var x=padL+slot*i+(slot-bw)/2;
+      var h=plotH*b.v/max;
+      var y=padT+plotH-h;
+      s+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+Math.max(0,h)+'" rx="4" fill="'+b.c+'"/>';
+      s+='<text x="'+(x+bw/2)+'" y="'+(y-7)+'" text-anchor="middle" fill="var(--ink)" font-size="10" font-weight="600">'+kfmt(b.v)+'</text>';
+      s+='<text x="'+(x+bw/2)+'" y="'+(H-14)+'" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="600">'+b.label+'</text>';
+    });
+    svg.innerHTML=s;
+  }
+  function kfmt(v){
+    if(v>=1e6) return (v/1e6).toFixed(v>=1e7?0:1).replace('.',',')+'M';
+    if(v>=1e3) return Math.round(v/1e3)+'k';
+    return Math.round(v);
+  }
+
+  // theme toggle
+  var tb=$('themeBtn');
+  tb.addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme');
+    var isDark = cur==='dark' || (!cur && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
+    calc();
+  });
+
+  $('reset').addEventListener('click',function(){
+    $('bac').value=500000; $('planned').value=50; $('plannedR').value=50; $('plannedOut').textContent='50%';
+    $('actual').value=45; $('actualR').value=45; $('actualOut').textContent='45%'; $('ac').value=210000; calc();
+  });
+
+  link('planned','plannedR','plannedOut');
+  link('actual','actualR','actualOut');
+  ['bac','ac'].forEach(function(id){$(id).addEventListener('input',calc)});
+  calc();
+})();
+</script>
